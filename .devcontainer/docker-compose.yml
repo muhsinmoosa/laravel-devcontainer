@@ -1,0 +1,68 @@
+version: '3.7'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: php/Dockerfile
+    volumes:
+      - ../:/var/www/html
+    ports:
+      - 8000:80
+    networks:
+      - network-name
+    depends_on:
+      - mysql
+  mysql:
+    image: "mysql/mysql-server:8.0"
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3309:3309"
+    networks:
+      - network-name
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: "${DB_DATABASE}"
+      MYSQL_USER: "${DB_USERNAME}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+    volumes:
+      - mysql:/var/lib/mysql
+  phpmyadmin:
+    image: phpmyadmin
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+      PMA_ARBITRARY: 1
+      PMA_HOST: mysql
+      PMA_USER: "${DB_USERNAME}"
+      PMA_PASSWORD: "${DB_PASSWORD}"
+    ports:
+      - 8001:80
+    networks:
+      - network-name
+    depends_on:
+      - mysql
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "${FORWARD_REDIS_PORT:-6379}:6379"
+    volumes:
+      - "redis:/data"
+    networks:
+      - network-name
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      retries: 3
+      timeout: 5s
+networks:
+  network-name:
+    driver: bridge
+volumes:
+  mysql:
+    driver: local
+  redis:
+    driver: local
